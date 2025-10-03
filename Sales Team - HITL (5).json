@@ -1,0 +1,665 @@
+{
+  "name": "Sales Team - HITL",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Incoming Lead\n\nName: {{ $json.Name }}\n\nEmail: {{ $json.Email }}\n\nInterested service:{{ $json['Interested service'] }}\n\nCompany Name: {{ $json['Company '] }}\n\nPhone number:{{ $json['Phone number'] }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=# Overview\nYou are an expert sales person for an agency that delivers Commercial AI SOLUTION. Your job is to respond to incoming leads by addressing their needs in a professional manner. You will receive information like interested service, and your goal is to convince them that we are the best AI Agency on the market.\n\n## Tools\nPinecone Vector Store - Use this tool to search through service we have. \n\n## Rules\n- You will receive information about a lead, and you need to craft a professional email,by retrieving the data in the Tools- Pinecone.\n\n- If you find the corresponding service in the Tool, elaborate on the service they are interested, don't go too extensively on the service they didn't mention.\n\n-If they select \"others\" for interested service, briefly summarize the services we offer.\n\n- Keep it concise, nobody wants to read a huge email.\n\n- Your main objective is to convince the lead to book in a second call. Your job is to make them believe that we can deliver the project they have described and exceed their expectations.\n\n\n\n## Final Notes\nSign off emails as Jim, AuraSphere AI\nHere is the current date/time: {{ $now }}\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        240,
+        352
+      ],
+      "id": "a026dd9f-ccaf-4558-81d1-ed973eadc781",
+      "name": "Sales Agent"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"subject\": {\n      \"type\": \"string\",\n      \"description\": \"The subject line of the email\"\n    },\n    \"email\": {\n      \"type\": \"string\",\n      \"description\": \"The body content of the email\"\n    }\n  },\n  \"required\": [\"subject\", \"email\"]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        1328,
+        832
+      ],
+      "id": "911979b0-81ee-4a3f-a666-68f8a785adb0",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Append or update row in sheet').item.json.Email }}",
+        "subject": "={{ $('Set Email').item.json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1728,
+        256
+      ],
+      "id": "a3dd0282-8d01-4473-b34f-34dbc38fb044",
+      "name": "Send Email",
+      "webhookId": "9ae2a2f2-de7c-46a1-93f7-8b2612d40751",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rX7fR4KMBu1zo5Ui",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Email: {{ $('Set Email').item.json.email }}\n\nFeedback from human: {{ $json.data.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=# Overview\nYou are an expert email writer. Your job is to take an incoming email and revise/add/delete information based on the feedback the human submitted.\n\n## Rules\nSign off emails as Jim, Dunder AI\nHere is the current date/time: {{ $now }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1856,
+        368
+      ],
+      "id": "6bbe5260-818d-46fe-bb12-d7f214997d3b",
+      "name": "Revision Agent"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "08fe9ff0-027e-479f-955e-ea7214a063d0",
+              "name": "subject",
+              "value": "={{ $json.output.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "8e0f4286-d783-48f7-8965-1eb36a3f116b",
+              "name": "email",
+              "value": "={{ $json.output.email }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        704,
+        352
+      ],
+      "id": "4f80f8f4-fc5f-416c-9710-e435fd6e9b92",
+      "name": "Set Email"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "daixiaoxian0710@gmail.com",
+        "subject": "=APPROVAL REQUIRED for New Lead: {{ $('Append or update row in sheet').item.json.Name }}",
+        "message": "={{ $('Append or update row in sheet').item.json.Name }} from{{ $('Append or update row in sheet').item.json['Company '] }} is looking for {{ $('Append or update row in sheet').item.json['Interested service'] }} support. \n\n\nPlease approve or decline the sending of this message generated by Jim, our AI Sales Agent.\n\nSubject: {{ $json.subject }}\n\nEmail: {{ $json.email }}",
+        "responseType": "freeText",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        832,
+        352
+      ],
+      "id": "f977bf48-4be5-4e79-92bc-4d07961bdb1a",
+      "name": "Get Feedback",
+      "webhookId": "10605e1c-7bc0-4a9f-b23a-9797cc88449e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rX7fR4KMBu1zo5Ui",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $json.data.text }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "Approved",
+              "description": "The email has been reviewed and accepted as-is. The human explicitly or implicitly expresses approval, indicating that no changes are needed. \n\nExample phrases include:\n\n\"Looks good.\"\n\"Go ahead and send it.\"\n\"This works for me.\"\n\"Approved.\"\n\"No changes needed.\""
+            },
+            {
+              "category": "Declined",
+              "description": "=The email has been reviewed, but the human requests modifications before it is sent like tweaks, removing parts, rewording, etc. This could include suggested edits, rewording, or major revisions. \n\nExample phrases include:\n\n\"Can we tweak this part?\"\n\"Needs some changes.\"\n\"I’d like to reword this.\"\n\"Not quite right—let’s revise it.\"\n\"Can you adjust this before sending?\"\n\"Don't mention that we can't do that\"\n\"Suggest a meeting next friday\""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        352
+      ],
+      "id": "e756c97f-c5b2-4576-b1a8-2a2c900d185d",
+      "name": "Check Feedback"
+    },
+    {
+      "parameters": {
+        "content": "# Human In The Loop\n## The agents wait for feedback and approval\n\n",
+        "height": 644,
+        "width": 1424,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        800,
+        96
+      ],
+      "typeVersion": 1,
+      "id": "a6155f4d-53d4-48a0-86d7-19b7cf6b6c51",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "formTitle": "Sales request",
+        "formDescription": "Our sales person will come back to you as soon as possible",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Comapny",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Interested service",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Customer Intelligence & Personalization"
+                  },
+                  {
+                    "option": "Predictive Analytics & Demand Forecasting"
+                  },
+                  {
+                    "option": "Automated Content & Media Generation"
+                  },
+                  {
+                    "option": "Intelligent Customer Service Automation"
+                  },
+                  {
+                    "option": "Others"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Phone number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -368,
+        352
+      ],
+      "id": "c5687439-847c-466d-ba2c-1a4481b07bbe",
+      "name": "On form submission",
+      "webhookId": "2aab3d5f-f612-4341-a02e-1fdcddaf4dae"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1svW1h3kRmmuXUNMNOYafCPmASoCvyYGGDi4VYhNG4FQ",
+          "mode": "list",
+          "cachedResultName": "request sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1svW1h3kRmmuXUNMNOYafCPmASoCvyYGGDi4VYhNG4FQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1806146545,
+          "mode": "list",
+          "cachedResultName": "SALE REQUEST",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1svW1h3kRmmuXUNMNOYafCPmASoCvyYGGDi4VYhNG4FQ/edit#gid=1806146545"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.Name }}",
+            "Email": "={{ $json.Email }}",
+            "Company ": "={{ $json.Comapny }}",
+            "Interested service": "={{ $json['Interested service'] }}",
+            "Phone number": "={{ $json['Phone number'] }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company ",
+              "displayName": "Company ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Interested service",
+              "displayName": "Interested service",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone number",
+              "displayName": "Phone number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -96,
+        352
+      ],
+      "id": "5a36a940-1f2f-46a7-aa49-1ef7173d67c4",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ArFFUr6t35bFkkKv",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Retrieve data from this and answer question",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "n8n2",
+          "mode": "list",
+          "cachedResultName": "n8n2"
+        },
+        "topK": 1,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        240,
+        640
+      ],
+      "id": "239f716c-ff3b-4b2a-b6bf-34121ef4daeb",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "ql800hm8YbIJxkgk",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        640,
+        848
+      ],
+      "id": "f8d7b978-5dad-418c-8ab0-434aa7603084",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "BjgYzEyhk5MU4uxx",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        224,
+        832
+      ],
+      "id": "9e5310ab-7351-4cd2-a2d8-a8094d8a3d49",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "SQ69WwHMioDQEmcy",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "o3-mini",
+          "mode": "list",
+          "cachedResultName": "o3-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1008,
+        832
+      ],
+      "id": "b8fe537d-6651-45d9-923b-63403a6d833e",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "BjgYzEyhk5MU4uxx",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const email   = $('Set Email').first().json.email ?? '';\nconst subject = $('Set Email').first().json.subject ?? '';\n\nconst html = `\n<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<title>${subject}</title>\n<style>\n  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }\n  .container { width: 90%; max-width: 600px; margin: 20px auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }\n  .header { text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; border-radius: 8px 8px 0 0; margin: -30px -30px 30px -30px; }\n  .header h1 { font-size: 28px; margin: 0 0 10px 0; font-weight: bold; }\n  p { margin-bottom: 20px; font-size: 16px; white-space: normal; }\n</style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\"><h1>AuraSphere</h1></div>\n    <p>${email.replace(/\\n/g, '<br>')}</p>\n  </div>\n</body>\n</html>\n`;\n\nreturn [{ json: { html } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        256
+      ],
+      "id": "f1188ec8-7f57-4aca-bfb8-157d4614c142",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "content": "# Email drafting when receiving sales request",
+        "height": 640,
+        "width": 1104
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -416,
+        112
+      ],
+      "typeVersion": 1,
+      "id": "af3b7e3a-93db-4d33-a81f-2f0ab3114fb6",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {
+    "Sales Agent": [
+      {
+        "json": {
+          "output": {
+            "subject": "Enhance Anamas' Customer Engagement with Our AI-Driven Personalization Solutions",
+            "email": "Dear Jane,\n\nThank you for your interest in our Customer Intelligence & Personalization services. At AuraSphere AI, we specialize in leveraging advanced AI to help businesses like Anamas deeply understand and engage their customers more effectively.\n\nOur Customer Intelligence & Personalization solutions include segmented marketing automation, where we automatically create customer segments such as \"high-value at risk\" or \"new enthusiast\" and trigger personalized email and SMS campaigns based on predicted customer behavior. This ensures your marketing efforts are precisely targeted and highly effective.\n\nAdditionally, our predictive analytics capabilities help you identify your most valuable customer segments via Customer Lifetime Value (CLV) prediction, allowing targeted retention strategies to boost loyalty and revenue.\n\nWe would love to discuss how these AI-driven strategies can be tailored to meet Anamas’ unique goals and exceed your expectations. Could we schedule a follow-up call at your convenience to explore this further?\n\nLooking forward to connecting soon.\n\nBest regards,\nJim\nAuraSphere AI"
+          }
+        }
+      }
+    ],
+    "On form submission": [
+      {
+        "json": {
+          "Name": "Jane",
+          "Comapny": "Anamas",
+          "Interested service": "Customer Intelligence & Personalization",
+          "Email": "1137308606@qq.com",
+          "Phone number": "",
+          "submittedAt": "2025-10-02T18:19:22.622+02:00",
+          "formMode": "test"
+        }
+      }
+    ],
+    "Append or update row in sheet": [
+      {
+        "json": {
+          "Name": "Jane",
+          "Email": "1137308606@qq.com",
+          "Company ": "Anamas",
+          "Interested service": "Customer Intelligence & Personalization",
+          "Phone number": ""
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Sales Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          },
+          {
+            "node": "Revision Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sales Agent": {
+      "main": [
+        [
+          {
+            "node": "Set Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revision Agent": {
+      "main": [
+        [
+          {
+            "node": "Set Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Email": {
+      "main": [
+        [
+          {
+            "node": "Get Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Feedback": {
+      "main": [
+        [
+          {
+            "node": "Check Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Feedback": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Revision Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Sales Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "Sales Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Sales Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Revision Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Check Feedback",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6466dc16-c190-4040-b592-610866d31270",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "740cd7858bbaa60fdd1f89ddfd3c562d312c49b5df061f97b6a780fb677a760a"
+  },
+  "id": "mTjOwwOfF1Bs9Gd3",
+  "tags": []
+}
